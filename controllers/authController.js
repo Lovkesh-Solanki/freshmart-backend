@@ -1,4 +1,4 @@
-const User = require('../models/user');
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
@@ -214,4 +214,5 @@ exports.deleteAddress = async (req, res) => {
     console.error('❌ Delete address error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
+
 };
