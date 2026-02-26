@@ -18,7 +18,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.get('/', (req, res) => {
-  res.send('Blinkit Clone API is running 🚀');
+  res.send('Freshmart API is running 🚀');
 });
 
 app.get('/api', (req, res) => {
@@ -68,4 +68,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+
 });
