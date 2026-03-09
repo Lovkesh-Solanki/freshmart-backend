@@ -2,34 +2,106 @@ const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 
-// Create order from cart
-exports.createOrder = async (req, res) => {
-  try {
-    const { deliveryAddress } = req.body;
+// // Create order from cart
+// exports.createOrder = async (req, res) => {
+//   try {
+//     const { deliveryAddress } = req.body;
 
-    if (!deliveryAddress || !deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.state || !deliveryAddress.zipCode) {
-      return res.status(400).json({ message: 'Please provide complete delivery address' });
-    }
+//     if (!deliveryAddress || !deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.state || !deliveryAddress.zipCode) {
+//       return res.status(400).json({ message: 'Please provide complete delivery address' });
+//     }
 
-    // Get user's cart
-    const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+//     // Get user's cart
+//     const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
     
-    if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ message: 'Cart is empty' });
-    }
+//     if (!cart || cart.items.length === 0) {
+//       return res.status(400).json({ message: 'Cart is empty' });
+//     }
 
-    // Check stock availability
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product._id);
-      if (!product) {
-        return res.status(404).json({ message: `Product ${item.product.name} not found` });
-      }
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ 
-          message: `Not enough stock for ${product.name}. Available: ${product.stock}` 
-        });
-      }
-    }
+//     // Check stock availability
+//     for (const item of cart.items) {
+//       const product = await Product.findById(item.product._id);
+//       if (!product) {
+//         return res.status(404).json({ message: `Product ${item.product.name} not found` });
+//       }
+//       if (product.stock < item.quantity) {
+//         return res.status(400).json({ 
+//           message: `Not enough stock for ${product.name}. Available: ${product.stock}` 
+//         });
+//       }
+//     }
+    exports.createOrder = async (req, res) => {
+        try {
+          console.log('📦 Order request:', req.body); // Debug log
+          console.log('👤 User:', req.user._id); // Debug log
+      
+          const { deliveryAddress } = req.body;
+      
+          // Validate address
+          if (!deliveryAddress) {
+            return res.status(400).json({ 
+              message: 'Delivery address is required' 
+            });
+          }
+      
+          const { street, city, state, zipCode } = deliveryAddress;
+          
+          if (!street || !city || !state || !zipCode) {
+            return res.status(400).json({ 
+              message: 'Please provide complete delivery address (street, city, state, zipCode)' 
+            });
+          }
+      
+          // Get cart
+          const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+          
+          if (!cart || cart.items.length === 0) {
+            return res.status(400).json({ message: 'Cart is empty' });
+          }
+      
+          // Check stock for all items
+          for (const item of cart.items) {
+            if (item.product.stock < item.quantity) {
+              return res.status(400).json({ 
+                message: `${item.product.name} is out of stock` 
+              });
+            }
+          }
+      
+          // Create order
+          const order = await Order.create({
+            user: req.user._id,
+            items: cart.items.map(item => ({
+              product: item.product._id,
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            deliveryAddress,
+            totalAmount: cart.totalAmount,
+            deliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days
+          });
+      
+          // Update stock
+          for (const item of cart.items) {
+            await Product.findByIdAndUpdate(item.product._id, {
+              $inc: { stock: -item.quantity }
+            });
+          }
+      
+          // Clear cart
+          cart.items = [];
+          await cart.save();
+      
+          res.status(201).json(order);
+      
+        } catch (error) {
+          console.error('❌ Create order error:', error);
+          res.status(500).json({ 
+            message: error.message || 'Failed to create order' 
+          });
+        }
+      };
 
     // Create order items
     const orderItems = cart.items.map(item => ({
@@ -153,4 +225,5 @@ exports.getAllOrders = async (req, res) => {
     console.error('❌ Get all orders error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
+
 };
