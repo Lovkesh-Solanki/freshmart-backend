@@ -23,11 +23,20 @@ const orderSchema = new mongoose.Schema({
       required: true
     }
   }],
-  deliveryAddress: {
-    street: { type: String, required: true },
+  shippingAddress: {  // ← Changed from deliveryAddress
+    addressLine1: { type: String, required: true },
+    addressLine2: String,
     city: { type: String, required: true },
     state: { type: String, required: true },
-    zipCode: { type: String, required: true }
+    pincode: { type: String, required: true }  // ← Changed from zipCode
+  },
+  phone: {  // ← Added
+    type: String,
+    required: true
+  },
+  paymentMethod: {  // ← Added
+    type: String,
+    default: 'cod'
   },
   totalAmount: {
     type: Number,
@@ -49,4 +58,4 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+module.exports = mongoose.models.Order || mongoose.model('Order', orderSchema);
